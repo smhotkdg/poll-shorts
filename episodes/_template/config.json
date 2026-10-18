@@ -1,0 +1,56 @@
+{
+  "id": "<episode-id>",
+  "question": "<질문>",
+  "highlight": "<빨간색 강조 단어>",
+  "choices": [
+    {
+      "no": 1,
+      "label": "<선택지1>",
+      "image": "assets/01.png"
+    },
+    {
+      "no": 2,
+      "label": "<선택지2>",
+      "image": "assets/02.png"
+    },
+    {
+      "no": 3,
+      "label": "<선택지3>",
+      "image": "assets/03.png"
+    },
+    {
+      "no": 4,
+      "label": "<선택지4>",
+      "image": "assets/04.png"
+    }
+  ],
+  "cta": "<CTA 문구>",
+  "hook_image": 3,
+  "badge_colors": [
+    "#A0705A",
+    "#D98C8C",
+    "#4A5A78",
+    "#6B8A5E"
+  ],
+  "highlight_color": "#E53935",
+  "timing": {
+    "hook": 1.5,
+    "hook_blur_from": 25,
+    "hook_blur_to": 8,
+    "hook_blur_start": 0.5,
+    "per_choice": 1.3,
+    "zoom_from": 1.0,
+    "zoom_to": 1.06,
+    "grid": 4.0,
+    "loop_cut": 0.2
+  },
+  "layout": {
+    "single_text_y": 0.4,
+    "grid_question_y": 0.22
+  },
+  "audio": {
+    "tts": "assets/tts.wav",
+    "bgm": "assets/bgm.mp3",
+    "bgm_gain_db": -18
+  }
+}

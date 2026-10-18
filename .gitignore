@@ -1,0 +1,15 @@
+# 렌더 결과
+episodes/*/out/
+
+# 생성 미디어 (원하면 이 줄들을 지워서 커밋)
+episodes/*/assets/*.png
+episodes/*/assets/*.jpg
+episodes/*/assets/*.mp4
+episodes/*/assets/*.wav
+episodes/*/assets/*.mp3
+!episodes/*/assets/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+.venv/
