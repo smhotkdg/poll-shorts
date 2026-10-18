@@ -18,4 +18,6 @@
 
 ## 음악 출처
 
-BGM 확정 후 채움. CC BY 곡이면 위 설명란 맨 아래에도 출처 문구를 붙인다.
+"Catwalk Fashion House Volume 1 - 20" by dannyballan (https://pixabay.com/music/upbeat-catwalk-fashion-house-volume-1-20-432337/)
+- Pixabay Content License → 출처 표기 의무 없음 (설명란에는 넣지 않음)
+- 사용 구간: 24.22s부터 10.9s

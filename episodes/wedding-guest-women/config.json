@@ -49,9 +49,9 @@
     "grid_question_y": 0.22
   },
   "bgm": {
-    "track": null,
+    "track": "catwalk-fashion-house-20",
     "mood": "trendy fashion groove, sexy catwalk, upbeat funk/house, 110-128 BPM, no vocals",
-    "start": 0.0,
+    "start": 24.22,
     "fade_in": 0.1,
     "fade_out": 0.3,
     "loudness_lufs_no_tts": -14,
