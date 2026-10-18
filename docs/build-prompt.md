@@ -9,9 +9,15 @@
 [입력]
 - episodes/<에피소드명>/config.json (스키마는 episodes/_template/config.json 참고)
 - episodes/<에피소드명>/assets/01.png~04.png (4:5). 01.mp4~04.mp4가 있으면 영상 클립 우선 사용
-- 선택: tts.wav, bgm.mp3 (BGM은 -18dB 정도로 작게)
+- bgm/<config의 bgm.track>.mp3 (필수), 선택: assets/tts.wav
 
-[출력] 1080x1920, 30fps, 총 10~12초, H.264 → episodes/<에피소드명>/out/final.mp4
+[출력] 1080x1920, 30fps, 총 10~12초, H.264 + AAC → episodes/<에피소드명>/out/final.mp4
+
+[배경음악]
+- bgm.track이 비어 있거나 파일이 없으면 렌더 전에 docs/bgm-guide.md 규칙대로 오픈 소스에서 bgm.mood에 맞는 후보 3곡을 찾아 표로 보여주고 내가 고르면 받아서 bgm/library.json 등록 + config 채우기
+- bgm.start 지점부터 영상 길이만큼 자르고, 페이드 인 0.1초 / 아웃 0.3초
+- TTS 없으면 BGM을 약 -14 LUFS로 정규화, TTS 있으면 BGM -18dB + 음성 구간 사이드체인 덕킹
+- CC BY 곡이면 upload.md 설명란에 출처 표기 추가
 
 [구성]
 1) 0~1.5s 훅: hook_image 번호 이미지를 풀스크린으로 깔고 가우시안 블러 25px로 시작, 0.5s~1.5s 동안 블러 25→8로 서서히 감소. 질문 텍스트는 세로 약 40% 지점(중심보다 약간 위). highlight 단어는 빨간색(#E53935), 나머지는 흰색 + 검은 외곽선/그림자. hook_image가 없으면 질문만 표시

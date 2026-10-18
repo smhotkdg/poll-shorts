@@ -48,9 +48,15 @@
     "single_text_y": 0.4,
     "grid_question_y": 0.22
   },
-  "audio": {
-    "tts": "assets/tts.wav",
-    "bgm": "assets/bgm.mp3",
-    "bgm_gain_db": -18
-  }
+  "bgm": {
+    "track": null,
+    "mood": "<분위기 키워드, docs/bgm-guide.md 참고>",
+    "start": 0.0,
+    "fade_in": 0.1,
+    "fade_out": 0.3,
+    "loudness_lufs_no_tts": -14,
+    "gain_db_with_tts": -18,
+    "duck_under_tts": true
+  },
+  "tts": "assets/tts.wav"
 }

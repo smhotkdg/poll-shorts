@@ -14,14 +14,22 @@
 
 ## 출력 사양
 
-- 1080x1920, 30fps, 10~12초, H.264 → `episodes/<에피소드>/out/final.mp4`
-- BGM은 -18dB 정도로 작게
+- 1080x1920, 30fps, 10~12초, H.264 + AAC → `episodes/<에피소드>/out/final.mp4`
+
+## 배경음악 (모든 에피소드 필수)
+
+- `config.json`의 `bgm.track`에 적힌 `bgm/<track>.mp3`를 사용한다.
+- `bgm.track`이 비어 있거나 파일이 없으면, 렌더 전에 `docs/bgm-guide.md` 규칙대로 오픈 소스(Pixabay Music → OpenGameArt CC0 → Incompetech → FMA CC0/CC BY)에서 `bgm.mood`에 맞는 후보 3곡을 찾아 보여주고 내가 고르게 한다.
+- NC·ND·라이선스 불명확 음원은 절대 쓰지 않는다. CC BY 곡은 `upload.md`에 출처 표기를 넣는다.
+- 새 곡은 `bgm/library.json`에 등록한다. 오디오 파일은 커밋하지 않는다.
+- 음량: TTS 없으면 약 -14 LUFS, TTS 있으면 BGM -18dB + 음성 구간 덕킹. 페이드 인 0.1초 / 아웃 0.3초.
 
 ## 입력
 
 - `episodes/<에피소드>/config.json`
 - `episodes/<에피소드>/assets/01.png`~`04.png` (4:5). `01.mp4`~`04.mp4`가 있으면 영상 클립 우선
-- 선택: `tts.wav`, `bgm.mp3`
+- `bgm/<track>.mp3` (config의 `bgm.track`)
+- 선택: `assets/tts.wav`
 
 ## 에피소드 산출물
 

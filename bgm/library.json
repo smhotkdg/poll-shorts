@@ -1,0 +1,18 @@
+{
+  "_schema": {
+    "id": "파일명과 같은 track-id (bgm/<id>.mp3)",
+    "title": "곡명",
+    "artist": "아티스트",
+    "source": "pixabay | opengameart | incompetech | fma",
+    "source_url": "곡 페이지 URL",
+    "license": "Pixabay Content License | CC0 | CC BY 4.0 | ...",
+    "license_url": "라이선스 전문 또는 곡 페이지의 라이선스 표시 URL",
+    "attribution": "CC BY일 때 upload.md에 넣을 출처 문구, 필요 없으면 null",
+    "mood": ["fashion", "groove"],
+    "bpm": 120,
+    "vocals": false,
+    "recommended_start": 0.0,
+    "used_in": ["에피소드 id"]
+  },
+  "tracks": []
+}

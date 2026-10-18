@@ -13,3 +13,7 @@ episodes/*/assets/*.mp3
 __pycache__/
 *.pyc
 .venv/
+
+# BGM 오디오 (library.json의 source_url로 다시 받음)
+bgm/*.mp3
+bgm/*.wav
