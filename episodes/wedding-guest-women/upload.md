@@ -20,4 +20,4 @@
 
 "Catwalk Fashion House Volume 1 - 20" by dannyballan (https://pixabay.com/music/upbeat-catwalk-fashion-house-volume-1-20-432337/)
 - Pixabay Content License → 출처 표기 의무 없음 (설명란에는 넣지 않음)
-- 사용 구간: 24.22s부터 10.9s
+- 사용 구간: 70.82s부터 21.3s

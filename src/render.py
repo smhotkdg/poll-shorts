@@ -444,7 +444,11 @@ def main():
                 "-t", f"{scene.duration:.3f}", "-movflags", "+faststart", str(final)]
         enc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
 
-        save_at = {round(t * FPS): t for t in FRAME_TIMES}
+        times = list(FRAME_TIMES)
+        if not any(scene.t_grid <= t < scene.t_cut for t in times):
+            # 필수 시점이 모두 그리드 이전이면 그리드 검증용 프레임을 하나 더 저장
+            times.append(round(scene.t_grid + scene.t["grid"] / 2, 1))
+        save_at = {round(t * FPS): t for t in times}
         layout_all = {}
         for n in range(n_frames):
             t = n / FPS

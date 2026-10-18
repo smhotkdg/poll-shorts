@@ -38,7 +38,7 @@
     "hook_blur_from": 25,
     "hook_blur_to": 8,
     "hook_blur_start": 0.5,
-    "per_choice": 1.3,
+    "per_choice": 3.9,
     "zoom_from": 1.0,
     "zoom_to": 1.06,
     "grid": 4.0,
@@ -51,7 +51,7 @@
   "bgm": {
     "track": "catwalk-fashion-house-20",
     "mood": "trendy fashion groove, sexy catwalk, upbeat funk/house, 110-128 BPM, no vocals",
-    "start": 24.22,
+    "start": 70.82,
     "fade_in": 0.1,
     "fade_out": 0.3,
     "loudness_lufs_no_tts": -14,

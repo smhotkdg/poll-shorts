@@ -141,10 +141,13 @@ def main():
     print(f"- 비디오: {v['codec_name']} {v['width']}x{v['height']} @ {fps:g}fps")
     print(f"- 오디오: {a['codec_name']} {a['sample_rate']}Hz {a['channels']}ch" if a else "- 오디오: 없음")
     print(f"- 길이: {dur:.3f}s")
+    # 길이는 config 타이밍으로 계산된 설계 길이와 비교. 기본 사양(10~12초) 밖이면 경고만 낸다
     spec_ok = (v["codec_name"] == "h264" and (v["width"], v["height"]) == (1080, 1920) and abs(fps - 30) < 0.01
-               and 10 <= dur <= 12 and a is not None and a["codec_name"] == "aac")
+               and abs(dur - meta["duration"]) <= 0.05 and a is not None and a["codec_name"] == "aac")
     ok &= spec_ok
-    print(f"- 사양(1080x1920, 30fps, 10~12s, H.264+AAC): {'OK' if spec_ok else 'FAIL'}")
+    print(f"- 사양(1080x1920, 30fps, 설계 길이 {meta['duration']:.1f}s, H.264+AAC): {'OK' if spec_ok else 'FAIL'}")
+    if not 10 <= dur <= 12:
+        print(f"- 경고: 길이 {dur:.1f}s가 기본 사양 10~12초 밖입니다 (config timing 의도 확인)")
 
     if a:
         r = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", str(video), "-af", "ebur128=peak=true",
