@@ -38,7 +38,7 @@
     "hook_blur_from": 25,
     "hook_blur_to": 8,
     "hook_blur_start": 0.5,
-    "per_choice": 3.9,
+    "per_choice": 3.0,
     "zoom_from": 1.0,
     "zoom_to": 1.06,
     "grid": 4.0,
@@ -46,7 +46,7 @@
   },
   "layout": {
     "single_text_y": 0.4,
-    "grid_question_y": 0.22
+    "grid_question_y": 0.2
   },
   "bgm": {
     "track": "catwalk-fashion-house-20",

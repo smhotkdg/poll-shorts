@@ -319,14 +319,23 @@ class Scene:
                                  text_layer([(c["label"], WHITE)], 50), 12)
                           for i, c in enumerate(cfg["choices"])]
 
-        # 그리드 배치: 질문 아래에 2x2, 셀 4:5, 간격 균일
-        self.cell_w, self.cell_h, self.gap = 428, 535, 16
+        # 그리드 배치: 질문(세로 grid_question_y) → 2x2(셀 4:5, 간격 균일) → CTA 묶음이
+        # 화면 세로 중앙에 오도록, 질문 위 여백 = CTA 아래 여백이 되게 셀 크기를 계산한다
+        self.gap, inner = 16, 34
+        sq, sc = solid_box(self.grid_q), solid_box(self.cta)
+        qh, ch = sq[3] - sq[1], sc[3] - sc[1]
+        q_cy = H * self.grid_q_y
+        margin = q_cy - qh / 2
+        q_bottom = q_cy + qh / 2
+        grid_h = (H - margin) - ch - inner - q_bottom - inner
+        self.cell_h = int((grid_h - self.gap) // 2)
+        self.cell_w = round(self.cell_h * 0.8)
+        slack = grid_h - (self.cell_h * 2 + self.gap)  # 반올림 잔여는 위아래 간격에 나눠 준다
         grid_w = self.cell_w * 2 + self.gap
         self.grid_x = (W - grid_w) // 2
-        q_bottom = round(H * self.grid_q_y) + self.grid_q.height - self.grid_q.height // 2
-        self.grid_y = q_bottom + 34
+        self.grid_y = round(q_bottom + inner + slack / 2)
         grid_bottom = self.grid_y + self.cell_h * 2 + self.gap
-        self.cta_cy = grid_bottom + 34 + self.cta.height // 2
+        self.cta_cy = grid_bottom + inner + slack / 2 + ch / 2
         self.cell_mask = self._rounded_mask(self.cell_w, self.cell_h, 28)
         self.cell_frame = self._cell_frame()
 
