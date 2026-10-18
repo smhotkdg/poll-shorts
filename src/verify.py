@@ -3,7 +3,7 @@
 실행: python src/verify.py episodes/<에피소드명>
 
 final.mp4에서 검증 시점 프레임을 다시 뽑아, 같은 시점의 배경만 있는 프레임(_bg_*.png)과 비교해
-텍스트·배지 픽셀만 분리한 뒤 좌우/상하 여백을 측정한다. 그리드는 단색 배경 대비로 측정한다.
+텍스트·배지 픽셀만 분리한 뒤 좌우/상하 여백을 측정한다. 그리드는 셀 없는 배경판(_plate_*.png) 대비로 측정한다.
 좌우 차이가 TOL_PX를 넘거나 규칙 위반이 있으면 종료 코드 1.
 """
 import json
@@ -17,7 +17,6 @@ from PIL import Image
 
 TOL_PX = 2
 EDGE_MIN = 0.05  # 화면 위·아래 5% 안쪽에 붙으면 위반
-GRID_BG = np.array([17, 17, 19])
 
 
 def extract_frame(video, n, w, h):
@@ -59,7 +58,10 @@ def main():
         n = round(float(key) * FPS)
         frame = extract_frame(video, n, W, H)
         bg = np.asarray(Image.open(out / "frames" / f"_bg_{key}s.png").convert("RGB")).astype(int)
-        diff = np.abs(frame - bg).max(axis=2) > 60
+        # 눈에 보이는 잉크 = 배경보다 밝아진 글자·링 픽셀 + 거의 검정인 외곽선 픽셀.
+        # 부드러운 그림자는 배경을 일부만 어둡게 해서 배경 밝기에 따라 번짐 폭이 달라지므로 제외
+        fmax, bmax = frame.max(axis=2), bg.max(axis=2)
+        diff = ((frame - bg).max(axis=2) > 60) | ((fmax < 45) & (fmax <= bmax * 0.35))
 
         # 상단 진행 칩/바 검사: 위 8% 띠에 오버레이 픽셀이 있으면 안 됨
         top_band = diff[: int(H * 0.08)].sum()
@@ -97,7 +99,8 @@ def main():
 
         # 그리드: 단색 배경 대비 측정 + 셀 간격 균일성
         if cells:
-            g = np.abs(frame - GRID_BG).max(axis=2) > 30
+            plate = np.asarray(Image.open(out / "frames" / f"_plate_{key}s.png").convert("RGB")).astype(int)
+            g = np.abs(frame - plate).max(axis=2) > 50  # 셀 그림자(옅은 어두워짐)는 제외
             gy0 = min(c["y0"] for c in cells.values())
             gy1 = max(c["y1"] for c in cells.values())
             band = g[gy0:gy1]

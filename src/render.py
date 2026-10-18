@@ -3,7 +3,7 @@
 실행: python src/render.py episodes/<에피소드명> [--no-bgm]
 
 - 합성은 Pillow로 프레임을 만들고 ffmpeg(libx264)로 파이프 인코딩한다.
-- 검증용으로 out/frames/에 0.3/1.2/4.0/9.0초 프레임, 같은 시점의 배경만 있는 프레임(_bg_*.png),
+- 검증용으로 out/frames/에 0.3/1.2/4.0/9.0초 프레임, 같은 시점의 배경만 있는 프레임(_bg_*.png), 그리드 시점의 셀 없는 배경판(_plate_*.png),
   요소별 위치 정보(layout.json)를 함께 저장한다. 실제 측정은 src/verify.py가 final.mp4에서 한다.
 """
 import argparse
@@ -14,7 +14,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 W, H, FPS = 1080, 1920, 30
 ROOT = Path(__file__).resolve().parent.parent
@@ -39,14 +39,14 @@ WHITE = (255, 255, 255)
 _font_cache = {}
 
 
-def font(size):
-    key = ("ko", size)
+def font(size, weight=900):
+    key = ("ko", size, weight)
     if key not in _font_cache:
         for p in FONT_PATHS:
             if Path(p).exists():
                 f = ImageFont.truetype(p, size)
                 if p.endswith("-VF.ttf"):
-                    f.set_variation_by_axes([900])
+                    f.set_variation_by_axes([weight])
                 _font_cache[key] = f
                 break
         else:
@@ -84,7 +84,7 @@ def text_layer(segments, size):
     잉크(실제 픽셀) 기준으로 잘라낸 RGBA 레이어를 돌려준다."""
     f = font(size)
     ef = emoji_font(int(size * 0.9))
-    stroke = max(4, round(size * 0.09))
+    stroke = max(2, round(size * 0.04))  # 얇은 외곽선 + 넓은 그림자로 가독성 확보
     runs = [r for text, color in segments for r in split_runs(text, color)]
 
     def run_font(r):
@@ -114,11 +114,11 @@ def text_layer(segments, size):
 
     shadow = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
     draw_runs(shadow, True)
-    alpha = shadow.getchannel("A").filter(ImageFilter.GaussianBlur(size * 0.08)).point(lambda v: int(v * 0.6))
+    alpha = shadow.getchannel("A").filter(ImageFilter.GaussianBlur(size * 0.14)).point(lambda v: min(255, int(v * 0.9)))
     shadow = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
     shadow.putalpha(alpha)
     layer = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
-    layer.alpha_composite(shadow, (0, round(size * 0.06)))  # 세로로만 오프셋 → 좌우 대칭 유지
+    layer.alpha_composite(shadow, (0, round(size * 0.04)))  # 세로로만 오프셋 → 좌우 대칭 유지
     draw_runs(layer, False)
     return crop_ink(layer)
 
@@ -171,36 +171,81 @@ def stack_lines(lines, highlight, hl_color, size, gap):
     return out
 
 
-def badge_layer(no, color, diameter):
-    """번호 원형 배지 (흰 테두리 + 그림자)."""
-    ss = 4  # 슈퍼샘플링으로 원 가장자리 매끄럽게
-    pad = diameter // 6
-    size = diameter + pad * 2
-    big = Image.new("RGBA", (size * ss, size * ss), (0, 0, 0, 0))
-    d = ImageDraw.Draw(big)
-    o = pad * ss
-    d.ellipse([o, o, o + diameter * ss - 1, o + diameter * ss - 1], fill=WHITE)
-    b = max(3, diameter // 22) * ss
-    d.ellipse([o + b, o + b, o + diameter * ss - 1 - b, o + diameter * ss - 1 - b], fill=color)
-    circle = big.resize((size, size), Image.LANCZOS)
+def hex_rgb(color):
+    color = color.lstrip("#")
+    return tuple(int(color[i:i + 2], 16) for i in (0, 2, 4))
 
-    shadow_a = circle.getchannel("A").filter(ImageFilter.GaussianBlur(diameter * 0.06)).point(lambda v: int(v * 0.5))
+
+def mix(c1, c2, p):
+    return tuple(round(a + (b - a) * p) for a, b in zip(c1, c2))
+
+
+def badge_layer(no, color, diameter):
+    """번호 원형 배지: 위→아래 은은한 그라데이션 + 얇은 흰 링 + 부드러운 그림자, 숫자는 외곽선 없이."""
+    ss = 4  # 슈퍼샘플링으로 원 가장자리 매끄럽게
+    pad = diameter // 4
+    size = diameter + pad * 2
+    D, o = diameter * ss, pad * ss
+    base = hex_rgb(color)
+
+    # 원 마스크와 세로 그라데이션 채움
+    mask = Image.new("L", (size * ss, size * ss), 0)
+    ImageDraw.Draw(mask).ellipse([o, o, o + D - 1, o + D - 1], fill=255)
+    top, bottom = mix(base, WHITE, 0.22), mix(base, (0, 0, 0), 0.14)
+    grad = Image.new("RGB", (1, D))
+    grad.putdata([mix(top, bottom, y / (D - 1)) for y in range(D)])
+    fill = Image.new("RGBA", (size * ss, size * ss), (0, 0, 0, 0))
+    fill.paste(grad.resize((D, D)), (o, o))
+    fill.putalpha(mask)
+
+    # 얇은 흰 링
+    ring_w = max(2, round(diameter * 0.035)) * ss
+    ring = Image.new("RGBA", (size * ss, size * ss), (0, 0, 0, 0))
+    ImageDraw.Draw(ring).ellipse([o, o, o + D - 1, o + D - 1], outline=(255, 255, 255, 235), width=ring_w)
+    fill.alpha_composite(ring)
+    circle = fill.resize((size, size), Image.LANCZOS)
+
+    # 넓고 옅은 그림자 (세로로만 오프셋 → 좌우 대칭 유지)
+    shadow_a = circle.getchannel("A").filter(ImageFilter.GaussianBlur(diameter * 0.09)).point(lambda v: int(v * 0.45))
     layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     sh = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     sh.putalpha(shadow_a)
-    layer.alpha_composite(sh, (0, max(2, diameter // 30)))
+    layer.alpha_composite(sh, (0, max(2, round(diameter * 0.05))))
     layer.alpha_composite(circle)
 
-    num = text_layer([(str(no), WHITE)], int(diameter * 0.52))
-    layer.alpha_composite(num, ((size - num.width) // 2, (size - num.height) // 2))
+    # 숫자: Bold, 외곽선 없이 옅은 그림자만. 잉크 박스 기준으로 원 중심에 맞춘다
+    f = font(int(diameter * 0.5), weight=700)
+    txt = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(txt).text((size / 2, size / 2), str(no), font=f, anchor="mm", fill=255)
+    x0, y0, x1, y1 = txt.getbbox()
+    dx, dy = round(size / 2 - (x0 + x1) / 2), round(size / 2 - (y0 + y1) / 2)
+    txt = ImageChops.offset(txt, dx, dy)
+    num_sh = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    num_sh.putalpha(txt.filter(ImageFilter.GaussianBlur(diameter * 0.03)).point(lambda v: int(v * 0.35)))
+    layer.alpha_composite(num_sh, (0, max(1, round(diameter * 0.02))))
+    num = Image.new("RGBA", (size, size), WHITE + (0,))
+    num.putalpha(txt)
+    layer.alpha_composite(num)
     return crop_ink(layer)
 
 
+def solid_box(layer):
+    """그림자 번짐을 뺀, 눈에 보이는 불투명 부분(alpha>200)의 bbox."""
+    return layer.getchannel("A").point(lambda v: 255 if v > 200 else 0).getbbox() or (0, 0, *layer.size)
+
+
 def hstack(a, b, gap):
-    w, h = a.width + gap + b.width, max(a.height, b.height)
+    """a, b를 눈에 보이는 가장자리 사이 간격이 gap이 되도록 가로로 붙인다 (세로는 보이는 부분 중심 맞춤)."""
+    sa, sb = solid_box(a), solid_box(b)
+    bx = sa[2] + gap - sb[0]  # b 레이어의 x 위치
+    ay = -round((sa[1] + sa[3]) / 2)
+    by = -round((sb[1] + sb[3]) / 2)
+    x0, y0 = min(0, bx), min(ay, by)
+    w = max(a.width, bx + b.width) - x0
+    h = max(ay + a.height, by + b.height) - y0
     out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    out.alpha_composite(a, (0, (h - a.height) // 2))
-    out.alpha_composite(b, (a.width + gap, (h - b.height) // 2))
+    out.alpha_composite(a, (-x0, ay - y0))
+    out.alpha_composite(b, (bx - x0, by - y0))
     return out
 
 
@@ -268,24 +313,26 @@ class Scene:
         self.cta = text_layer([(cfg["cta"], WHITE)], 72)
 
         colors = cfg["badge_colors"]
-        self.big_badges = [badge_layer(c["no"], colors[i % len(colors)], 150) for i, c in enumerate(cfg["choices"])]
-        self.big_labels = [text_layer([(c["label"], WHITE)], 110) for c in cfg["choices"]]
-        self.cell_tags = [hstack(badge_layer(c["no"], colors[i % len(colors)], 72),
-                                 text_layer([(c["label"], WHITE)], 54), 14)
+        self.big_badges = [badge_layer(c["no"], colors[i % len(colors)], 132) for i, c in enumerate(cfg["choices"])]
+        self.big_labels = [text_layer([(c["label"], WHITE)], 96) for c in cfg["choices"]]
+        self.cell_tags = [hstack(badge_layer(c["no"], colors[i % len(colors)], 64),
+                                 text_layer([(c["label"], WHITE)], 50), 12)
                           for i, c in enumerate(cfg["choices"])]
 
         # 그리드 배치: 질문 아래에 2x2, 셀 4:5, 간격 균일
-        self.cell_w, self.cell_h, self.gap = 420, 525, 20
+        self.cell_w, self.cell_h, self.gap = 428, 535, 16
         grid_w = self.cell_w * 2 + self.gap
         self.grid_x = (W - grid_w) // 2
         q_bottom = round(H * self.grid_q_y) + self.grid_q.height - self.grid_q.height // 2
-        self.grid_y = q_bottom + 40
+        self.grid_y = q_bottom + 34
         grid_bottom = self.grid_y + self.cell_h * 2 + self.gap
-        self.cta_cy = grid_bottom + 30 + self.cta.height // 2
-        self.cell_mask = self._rounded_mask(self.cell_w, self.cell_h, 26)
+        self.cta_cy = grid_bottom + 34 + self.cta.height // 2
+        self.cell_mask = self._rounded_mask(self.cell_w, self.cell_h, 28)
+        self.cell_frame = self._cell_frame()
 
         hook = cfg.get("hook_image")
         self.hook_src = self.sources[hook - 1] if hook else None
+        self.grid_plate = self._grid_plate()
 
         self.t_choices = t["hook"]
         self.t_grid = t["hook"] + t["per_choice"] * len(self.sources)
@@ -299,16 +346,43 @@ class Scene:
         ImageDraw.Draw(m).rounded_rectangle([0, 0, w * ss - 1, h * ss - 1], r * ss, fill=255)
         return m.resize((w, h), Image.LANCZOS)
 
+    def _cell_frame(self):
+        """셀 아래 부드러운 그림자 + 셀 둘레 얇은 반투명 흰 선 (셀 위치 기준 오프셋 pad)."""
+        pad = 40
+        w, h = self.cell_w + pad * 2, self.cell_h + pad * 2
+        shadow = Image.new("L", (w, h), 0)
+        shadow.paste(self.cell_mask, (pad, pad))
+        shadow = shadow.filter(ImageFilter.GaussianBlur(18)).point(lambda v: int(v * 0.55))
+        under = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        under.putalpha(shadow)
+        ss = 4
+        line = Image.new("L", (self.cell_w * ss, self.cell_h * ss), 0)
+        ImageDraw.Draw(line).rounded_rectangle([0, 0, self.cell_w * ss - 1, self.cell_h * ss - 1], 28 * ss,
+                                               outline=255, width=2 * ss)
+        over = Image.new("RGBA", (self.cell_w, self.cell_h), WHITE + (0,))
+        over.putalpha(line.resize((self.cell_w, self.cell_h), Image.LANCZOS).point(lambda v: int(v * 0.35)))
+        return pad, under, over
+
+    def _grid_plate(self):
+        """그리드 배경: 훅 이미지를 크게 블러 + 어둡게 (없으면 단색)."""
+        if self.hook_src is None:
+            return Image.new("RGBA", (W, H), GRID_BG + (255,))
+        img = self.hook_src.render(W, H, 1.15).filter(ImageFilter.GaussianBlur(45))
+        dark = Image.new("RGB", (W, H), GRID_BG)
+        return Image.blend(img, dark, 0.68).convert("RGBA")
+
     @staticmethod
     def place(canvas, layer, cx, cy, name, layout):
-        """layer를 (cx, cy) 중심에 정확히 놓는다 (가로는 화면 중앙 대칭 기준)."""
-        x = round(cx - layer.width / 2)
-        y = round(cy - layer.height / 2)
+        """layer의 눈에 보이는 부분 중심을 (cx, cy)에 정확히 놓는다 (그림자 번짐은 기준에서 제외)."""
+        sx0, sy0, sx1, sy1 = solid_box(layer)
+        x = round(cx - (sx0 + sx1) / 2)
+        y = round(cy - (sy0 + sy1) / 2)
         canvas.alpha_composite(layer, (x, y))
         layout.append({"name": name, "x0": x, "y0": y, "x1": x + layer.width, "y1": y + layer.height})
 
-    def frame(self, t, with_overlay=True):
-        """시각 t의 프레임과 요소 배치 정보를 만든다."""
+    def frame(self, t, with_overlay=True, with_cells=True):
+        """시각 t의 프레임과 요소 배치 정보를 만든다.
+        with_overlay=False: 텍스트·배지 제외 (검증용 배경), with_cells=False: 그리드 셀까지 제외."""
         layout = []
         T = self.t
         if t >= self.t_cut:
@@ -326,20 +400,25 @@ class Scene:
             canvas = self.sources[i].render(W, H, zoom, int(local * FPS)).convert("RGBA")
             if with_overlay:
                 cy = H * self.single_y
-                self.place(canvas, self.big_badges[i], W / 2, cy - 110, f"badge_{i + 1}", layout)
-                self.place(canvas, self.big_labels[i], W / 2, cy + 60, f"label_{i + 1}", layout)
+                self.place(canvas, self.big_badges[i], W / 2, cy - 100, f"badge_{i + 1}", layout)
+                self.place(canvas, self.big_labels[i], W / 2, cy + 50, f"label_{i + 1}", layout)
         else:
             local = t - self.t_grid
-            canvas = Image.new("RGBA", (W, H), GRID_BG + (255,))
+            canvas = self.grid_plate.copy()
+            pad, under, over = self.cell_frame
             for i, src in enumerate(self.sources):
                 r, c = divmod(i, 2)
                 x = self.grid_x + c * (self.cell_w + self.gap)
                 y = self.grid_y + r * (self.cell_h + self.gap)
+                layout.append({"name": f"cell_{i + 1}", "x0": x, "y0": y,
+                               "x1": x + self.cell_w, "y1": y + self.cell_h, "kind": "grid"})
+                if not with_cells:
+                    continue
+                canvas.alpha_composite(under, (x - pad, y - pad + 8))
                 cell = src.render(self.cell_w, self.cell_h, 1.0, int(local * FPS)).convert("RGBA")
                 cell.putalpha(self.cell_mask)
                 canvas.alpha_composite(cell, (x, y))
-                layout.append({"name": f"cell_{i + 1}", "x0": x, "y0": y,
-                               "x1": x + self.cell_w, "y1": y + self.cell_h, "kind": "grid"})
+                canvas.alpha_composite(over, (x, y))
                 if with_overlay:
                     self.place(canvas, self.cell_tags[i], x + self.cell_w / 2,
                                y + self.cell_h - 30 - self.cell_tags[i].height / 2, f"cell_tag_{i + 1}", layout)
@@ -458,6 +537,8 @@ def main():
                 ft = save_at[n]
                 img.save(frames_dir / f"{ft:.1f}s.png")
                 scene.frame(t, with_overlay=False)[0].save(frames_dir / f"_bg_{ft:.1f}s.png")
+                if scene.t_grid <= t < scene.t_cut:
+                    scene.frame(t, with_overlay=False, with_cells=False)[0].save(frames_dir / f"_plate_{ft:.1f}s.png")
                 layout_all[f"{ft:.1f}"] = layout
         enc.stdin.close()
         if enc.wait() != 0:
