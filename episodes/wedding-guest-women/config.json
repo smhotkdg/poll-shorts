@@ -5,27 +5,27 @@
   "choices": [
     {
       "no": 1,
-      "label": "올화이트",
+      "label": "화이트",
       "image": "assets/01.png"
     },
     {
       "no": 2,
-      "label": "슬립 드레스",
+      "label": "핫핑크",
       "image": "assets/02.png"
     },
     {
       "no": 3,
-      "label": "클럽룩",
+      "label": "등산복",
       "image": "assets/03.png"
     },
     {
       "no": 4,
-      "label": "요가룩",
+      "label": "노출룩",
       "image": "assets/04.png"
     }
   ],
   "cta": "다 예쁜데… 몇 번? 👇",
-  "hook_image": 3,
+  "hook_image": 4,
   "badge_colors": [
     "#A0705A",
     "#D98C8C",
